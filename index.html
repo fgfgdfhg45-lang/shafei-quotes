@@ -189,6 +189,7 @@ body {
   flex-shrink: 0;
 }
 .greeting { font-size: 12.5px; font-weight: 700; color: #444; line-height: 2; text-align: justify; background: #fafafa; border-radius: 8px; padding: 14px 18px; margin: 18px 0; border-right: 4px solid #e07b00; font-style: italic; }
+.addressed-to-box { font-size: 14px; font-weight: 800; color: #1a3a6b; line-height: 1.8; background: #fff5e6; border-radius: 8px; padding: 12px 18px; margin-bottom: 18px; border-right: 5px solid #e07b00; }
 .qfooter { background: #1a3a6b; border-top: 3px solid #e07b00; padding: 14px 28px; display: flex; justify-content: space-between; align-items: center; }
 .qfooter .left { color: #ccc; font-size: 12px; font-weight: 700; }
 .qfooter .left .phones { color: #e07b00; font-size: 13px; font-weight: 800; margin-bottom: 3px; }
@@ -566,6 +567,11 @@ body {
     page-break-inside: avoid !important;
     display: block !important;
   }
+  .addressed-to-box {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    display: block !important;
+  }
   .qfooter {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
@@ -600,6 +606,7 @@ body {
   .adds-box { background: #f8f9fc !important; }
   .add-item { background: #1a3a6b !important; color: white !important; }
   .greeting { background: #fafafa !important; border-right-color: #e07b00 !important; }
+  .addressed-to-box { background: #fff5e6 !important; border-right-color: #e07b00 !important; color: #1a3a6b !important; }
   .qfooter { background: #1a3a6b !important; }
 
   /* ─── Force all text colors ─── */
@@ -1080,11 +1087,14 @@ body {
     <div style="font-size:34px;margin-bottom:6px;">🔒</div>
     <div style="font-size:15px;font-weight:900;color:#1a3a6b;margin-bottom:4px;">الشافعي ستيل للصناعات الهندسية</div>
     <div style="font-size:11px;font-weight:700;color:#888;margin-bottom:18px;">برنامج عروض الأسعار — دخول محمي</div>
-    <input id="lockPassInput" type="password" placeholder="كلمة المرور" autocomplete="off"
+    <input id="lockEmailInput" type="email" placeholder="البريد الإلكتروني" autocomplete="username" dir="ltr"
+      style="width:100%;padding:11px;border:1.5px solid #dde0e8;border-radius:8px;font-family:inherit;font-size:14px;margin-bottom:10px;box-sizing:border-box;text-align:center;font-weight:700;"
+      onkeydown="if(event.key==='Enter') document.getElementById('lockPassInput').focus();">
+    <input id="lockPassInput" type="password" placeholder="كلمة المرور" autocomplete="current-password"
       style="width:100%;padding:11px;border:1.5px solid #dde0e8;border-radius:8px;font-family:inherit;font-size:14px;margin-bottom:12px;box-sizing:border-box;text-align:center;font-weight:700;"
-      onkeydown="if(event.key==='Enter') checkLockPassword();">
-    <button onclick="checkLockPassword()" style="width:100%;background:#e07b00;color:#fff;border:none;border-radius:8px;padding:12px;font-weight:900;cursor:pointer;font-family:inherit;font-size:14px;">دخول</button>
-    <div id="lockError" style="color:#dc2626;font-size:12px;font-weight:800;margin-top:12px;display:none;">❌ كلمة المرور غلط، حاول تاني</div>
+      onkeydown="if(event.key==='Enter') doFirebaseLogin();">
+    <button onclick="doFirebaseLogin()" id="lockLoginBtn" style="width:100%;background:#e07b00;color:#fff;border:none;border-radius:8px;padding:12px;font-weight:900;cursor:pointer;font-family:inherit;font-size:14px;">دخول</button>
+    <div id="lockError" style="color:#dc2626;font-size:12px;font-weight:800;margin-top:12px;display:none;">❌ البريد أو كلمة المرور غلط، حاول تاني</div>
     <div id="lockCloudStatus" style="font-size:10px;font-weight:700;color:#aaa;margin-top:14px;"></div>
   </div>
 </div>
@@ -1102,6 +1112,10 @@ body {
     <div class="sidebar-body">
       <div class="sec-label">📅 بيانات العرض</div>
       <input class="inp" type="text" id="quoteDate" placeholder="التاريخ" oninput="generate()">
+      <label class="hide-price-lbl" style="background:#eef2ff;border-color:#1a3a6b;">
+        <input type="checkbox" id="showAddressedTo" onchange="generate()"> 🎯 إظهار "موجه إلى" في أول العرض
+      </label>
+      <textarea class="inp" id="addressedToText" rows="2" placeholder="مثال: هذا العرض موجه لشركة ..." oninput="generate()" style="margin-top:8px;"></textarea>
       <div class="sec-label">💱 سعر الدولار (جنيه)</div>
       <div style="position:relative;">
         <input class="inp" type="number" id="usdRate" value="52" step="0.01" placeholder="جاري التحديث..." oninput="recalcAllDollar()" style="direction:ltr; text-align:center; padding-left:36px;">
@@ -1115,6 +1129,7 @@ body {
       <div id="machinesContainer"></div>
       <button class="btn-orange" onclick="addMachineBlock()">+ إضافة ماكينة</button>
       <button class="btn-add-new" onclick="openAddModal()">&#9881; حفظ ماكينة جديدة في القائمة</button>
+      <button class="btn-add-new" style="margin-top:6px;" onclick="openManageMachinesModal()">&#128295; إدارة / حذف الماكينات المحفوظة</button>
       <div class="sec-label">💰 السعر الإجمالي (خط إنتاج)</div>
       <div id="totalsWrap"></div>
       <button class="btn-teal" onclick="addTotalBlock()">+ إضافة سعر إجمالي</button>
@@ -1131,6 +1146,7 @@ body {
       <button class="btn-archive-save" onclick="manualArchiveSave()">💾 حفظ في الأرشيف</button>
       <div id="cloudStatusBadge" style="font-size:10px;font-weight:800;text-align:center;padding:5px;border-radius:6px;margin-top:-2px;"></div>
       <button class="btn-archive-open" onclick="openArchiveModal()">🗂️ فتح الأرشيف</button>
+      <button onclick="doFirebaseLogout()" style="width:100%;border:none;border-radius:8px;padding:8px;cursor:pointer;font-size:11px;font-weight:800;font-family:inherit;background:#f3f4f6;color:#666;margin-top:2px;">🚪 تسجيل الخروج</button>
     </div>
   </div>
 
@@ -1322,6 +1338,7 @@ body {
         </div>
       </div>
       <div class="qbody">
+        <div class="addressed-to-box" id="dispAddressedTo" style="display:none;"></div>
         <div id="machinesOutput"></div>
         <div id="totalsOutput"></div>
         <div class="last-page-section">
@@ -1629,6 +1646,18 @@ function loadImg(id,inp){
 function generate(){
   const date=document.getElementById("quoteDate").value;
   document.getElementById("dispDate").textContent=date;
+  const showAddr = document.getElementById("showAddressedTo")?.checked;
+  const addrTxt = (document.getElementById("addressedToText")?.value||"").trim();
+  const addrBox = document.getElementById("dispAddressedTo");
+  if(addrBox){
+    if(showAddr && addrTxt){
+      addrBox.style.display = "block";
+      addrBox.textContent = addrTxt;
+    } else {
+      addrBox.style.display = "none";
+      addrBox.textContent = "";
+    }
+  }
   const out=document.getElementById("machinesOutput");
   out.innerHTML="";
   document.querySelectorAll("#machinesContainer .mb").forEach(block=>{
@@ -1784,50 +1813,13 @@ document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeAddMo
 // === END ADD NEW MACHINE ===
 
 // ============================================================
-// === LOCK SCREEN (كلمة مرور الدخول) ===
+// === تسجيل الدخول (Firebase Authentication - إيميل وباسورد حقيقيين) ===
 // ============================================================
-// كلمة المرور الافتراضية هي: shafei2026
-// لتغييرها: افتح كونسول المتصفح (F12) واكتب: await sha256Hex("كلمة_المرور_الجديدة")
-// وانسخ الناتج وضعه بدل القيمة تحت في LOCK_PASSWORD_HASH
-const LOCK_PASSWORD_HASH = "b4dc9351acb27879a3ceb1620421407582cce509b37c1b2c488dcaee8fc968f2";
-
-async function sha256Hex(str){
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-async function checkLockPassword(){
-  const val = document.getElementById('lockPassInput').value;
-  const hash = await sha256Hex(val);
-  if(hash === LOCK_PASSWORD_HASH){
-    document.getElementById('lockScreen').style.display='none';
-    document.getElementById('appRoot').style.display='';
-    try{ sessionStorage.setItem('shafei_unlocked','1'); }catch(e){}
-    initCloudArchive();
-  } else {
-    document.getElementById('lockError').style.display='block';
-    document.getElementById('lockPassInput').value='';
-    document.getElementById('lockPassInput').focus();
-  }
-}
-window.addEventListener('DOMContentLoaded', function(){
-  let alreadyUnlocked=false;
-  try{ alreadyUnlocked = sessionStorage.getItem('shafei_unlocked')==='1'; }catch(e){}
-  if(alreadyUnlocked){
-    document.getElementById('lockScreen').style.display='none';
-    document.getElementById('appRoot').style.display='';
-    initCloudArchive();
-  } else {
-    setTimeout(()=>document.getElementById('lockPassInput')?.focus(), 200);
-  }
-});
-// === END LOCK SCREEN ===
-
-// ============================================================
-// === ARCHIVE SYSTEM (حفظ العروض شهرياً + مزامنة سحابية + حذف بموافقة 3 مرات) ===
-// ============================================================
-// لتفعيل المزامنة السحابية بين كل الأجهزة: أنشئ مشروع Firebase مجاني
-// وحط بياناته هنا بدل القيم الفارغة. لو سبتها فاضية، البرنامج هيشتغل
-// بالتخزين المحلي بس (نفس سلوك النسخة السابقة) بدون أي مشاكل.
+// أول حاجة: لازم تفعّل "Email/Password" من Firebase Console:
+//   Authentication → Sign-in method → Email/Password → تفعيل
+// وتضيف حساب واحد بس بإيميل الشركة من:
+//   Authentication → Users → Add user (إيميل + باسورد)
+const ALLOWED_LOGIN_EMAIL = "alshafystyl@gmail.com"; // الإيميل الوحيد المسموح له بفتح البرنامج
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyDykzp2_4SJr7DjLkAmvHFSnCxXs_Ee9L0",
   authDomain: "alshafei-steel.firebaseapp.com",
@@ -1837,11 +1829,10 @@ const FIREBASE_CONFIG = {
   appId: "1:832213850052:web:1c2d9a7a0bb2501d793691"
 };
 
+let cloudDb = null;              // مرجع Firestore بعد تسجيل الدخول بنجاح
+let cachedCloudArchive = null;   // آخر نسخة وصلت من السحابة (تتحدث تلقائياً)
 const ARCHIVE_KEY = "alshafei_quotes_archive";
 const ARCHIVE_MONTHS_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
-
-let cloudDb = null;              // مرجع Firestore لو تم الإعداد بنجاح
-let cachedCloudArchive = null;   // آخر نسخة وصلت من السحابة (تتحدث تلقائياً)
 
 function isCloudConfigured(){
   return !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId);
@@ -1855,32 +1846,92 @@ function setCloudBadge(text, bg, color){
   b.style.color = color;
 }
 
-function initCloudArchive(){
-  if(!isCloudConfigured()){
-    setCloudBadge("📴 تخزين محلي فقط (مفيش إعداد سحابي)", "#f3f4f6", "#666");
-    return; // مفيش إعداد سحابي - هيشتغل بالتخزين المحلي فقط
+function showLockScreen(){
+  document.getElementById('lockScreen').style.display='flex';
+  document.getElementById('appRoot').style.display='none';
+  cloudDb = null;
+  setTimeout(()=>document.getElementById('lockEmailInput')?.focus(), 200);
+}
+
+function showAppRoot(){
+  document.getElementById('lockScreen').style.display='none';
+  document.getElementById('appRoot').style.display='';
+}
+
+async function doFirebaseLogin(){
+  const email = document.getElementById('lockEmailInput').value.trim();
+  const pass = document.getElementById('lockPassInput').value;
+  const btn = document.getElementById('lockLoginBtn');
+  const err = document.getElementById('lockError');
+  err.style.display='none';
+  if(!email || !pass){
+    err.textContent = "⚠️ اكتب البريد الإلكتروني وكلمة المرور";
+    err.style.display='block';
+    return;
   }
-  setCloudBadge("⏳ جاري الاتصال بالسحابة...", "#fef9c3", "#92640a");
   try{
     if(!firebase.apps || !firebase.apps.length){ firebase.initializeApp(FIREBASE_CONFIG); }
-    firebase.auth().signInAnonymously()
-      .then(function(){
-        cloudDb = firebase.firestore();
-        listenToCloudArchive();
-        listenToCloudMachines();
-        setCloudBadge("☁️ متصل بالأرشيف السحابي", "#dcfce7", "#15803d");
-      })
-      .catch(function(e){
-        console.warn("تعذر تسجيل الدخول لقاعدة البيانات، سيتم استخدام التخزين المحلي", e);
-        cloudDb = null;
-        setCloudBadge("📴 محلي فقط — خطأ: "+(e.code||e.message||"غير معروف"), "#fee2e2", "#dc2626");
-      });
+    btn.disabled = true; btn.textContent = "⏳ جاري الدخول...";
+    await firebase.auth().signInWithEmailAndPassword(email, pass);
+    // onAuthStateChanged هيتكفل بإظهار البرنامج بعد النجاح
   }catch(e){
-    console.warn("تعذر الاتصال بالسحابة، سيتم استخدام التخزين المحلي", e);
-    cloudDb = null;
-    setCloudBadge("📴 محلي فقط — خطأ: "+(e.message||"غير معروف"), "#fee2e2", "#dc2626");
+    err.textContent = "❌ " + (e.code==='auth/invalid-credential' || e.code==='auth/wrong-password' || e.code==='auth/user-not-found'
+      ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+      : (e.message || "حدث خطأ غير معروف"));
+    err.style.display='block';
+    document.getElementById('lockPassInput').value='';
+    document.getElementById('lockPassInput').focus();
+  }finally{
+    btn.disabled = false; btn.textContent = "دخول";
   }
 }
+
+function doFirebaseLogout(){
+  if(!confirm('هل تريد تسجيل الخروج من البرنامج؟')) return;
+  firebase.auth().signOut();
+}
+
+function startCloudSync(){
+  cloudDb = firebase.firestore();
+  listenToCloudArchive();
+  listenToCloudMachines();
+  setCloudBadge("☁️ متصل بالأرشيف السحابي", "#dcfce7", "#15803d");
+}
+
+window.addEventListener('DOMContentLoaded', function(){
+  if(!isCloudConfigured()){
+    setCloudBadge("📴 تخزين محلي فقط (مفيش إعداد سحابي)", "#f3f4f6", "#666");
+    // مفيش إعداد سحابي أصلاً؛ لا يوجد تسجيل دخول محمي، افتح البرنامج مباشرة
+    showAppRoot();
+    return;
+  }
+  try{
+    if(!firebase.apps || !firebase.apps.length){ firebase.initializeApp(FIREBASE_CONFIG); }
+  }catch(e){
+    console.warn("تعذر تهيئة Firebase", e);
+  }
+  setCloudBadge("⏳ جاري التحقق من تسجيل الدخول...", "#fef9c3", "#92640a");
+  firebase.auth().onAuthStateChanged(function(user){
+    if(user){
+      if((user.email||"").toLowerCase() !== ALLOWED_LOGIN_EMAIL.toLowerCase()){
+        // حساب غير مصرح له - سجّل خروجه فورًا ومنعه من دخول البرنامج
+        firebase.auth().signOut();
+        showLockScreen();
+        setCloudBadge("⛔ هذا الحساب غير مصرح له بالدخول", "#fee2e2", "#dc2626");
+        const err = document.getElementById('lockError');
+        err.textContent = "⛔ هذا الحساب غير مصرح له باستخدام البرنامج";
+        err.style.display='block';
+        return;
+      }
+      showAppRoot();
+      startCloudSync();
+    } else {
+      showLockScreen();
+      setCloudBadge("🔒 غير مسجل الدخول", "#fee2e2", "#dc2626");
+    }
+  });
+});
+// === END تسجيل الدخول ===
 
 // === مزامنة "الماكينات المحفوظة" (كتالوج السيرش) مع الأرشيف - نفس فكرة الأرشيف بالظبط ===
 let cachedCloudMachines = null; // آخر نسخة وصلت من مجموعة saved_machines على Firestore
@@ -1926,6 +1977,57 @@ function persistMachineToCloud(m){
     .catch(e=>alert("⚠️ تعذر حفظ الماكينة على القاعدة السحابية (اتحفظت على الجهاز ده بس):\n"+e.message));
 }
 // === END مزامنة الماكينات ===
+
+// === إدارة وحذف الماكينات المحفوظة ===
+function openManageMachinesModal(){
+  renderManageMachinesModal();
+  document.getElementById("manageMachinesModal").classList.add("open");
+}
+function closeManageMachinesModal(){
+  document.getElementById("manageMachinesModal").classList.remove("open");
+}
+function renderManageMachinesModal(){
+  const wrap = document.getElementById("manageMachinesListWrap");
+  if(!MACHINES.length){
+    wrap.innerHTML = '<div class="archive-empty">📭 لا توجد ماكينات محفوظة حتى الآن.<br>اضغط "إضافة ماكينة" في القائمة عشان تبدأ تحفظ.</div>';
+    return;
+  }
+  const sorted = MACHINES.slice().sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  wrap.innerHTML = sorted.map(m=>{
+    const safeName = m.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div class="archive-item">
+        <div class="archive-item-info">
+          <div class="archive-item-title">${m.name}</div>
+          <div class="archive-item-date">${(m.specs||[]).length} مواصفة محفوظة</div>
+        </div>
+        <div class="archive-item-actions">
+          <button class="btn-archive-del" onclick="deleteSavedMachine('${safeName}')">🗑️ حذف</button>
+        </div>
+      </div>`;
+  }).join("");
+}
+function deleteSavedMachine(name){
+  if(!confirm('هل تريد حذف "'+name+'" نهائياً من قائمة الماكينات المحفوظة؟\nمش هيأثر على أي عرض سعر مفتوح دلوقتي، بس مش هتلاقيها في نتائج البحث تاني.')) return;
+  const idx = MACHINES.findIndex(m=>m.name===name);
+  if(idx>-1) MACHINES.splice(idx,1);
+  persistMachines();
+  if(cloudDb){
+    const cloudEntry = (cachedCloudMachines||[]).find(m=>m.name===name);
+    if(cloudEntry && cloudEntry.id){
+      cloudDb.collection("saved_machines").doc(cloudEntry.id).delete()
+        .catch(e=>alert("⚠️ اتمسحت من الجهاز ده، لكن تعذر حذفها من القاعدة السحابية:\n"+e.message));
+    }
+  } else {
+    alert('⚠️ اتمسحت من الجهاز ده بس. انت مش متصل بالسحابة دلوقتي، فلو اتصلت بعدين ممكن ترجع تظهر تاني. اتأكد إنك متصل بالنت وحاول تحذفها تاني وقتها.');
+  }
+  renderManageMachinesModal();
+}
+window.addEventListener('DOMContentLoaded', function(){
+  const _mmModal = document.getElementById('manageMachinesModal');
+  if(_mmModal) _mmModal.addEventListener('click', function(e){ if(e.target===this) closeManageMachinesModal(); });
+});
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeManageMachinesModal(); });
+// === END إدارة وحذف الماكينات ===
 
 function listenToCloudArchive(){
   if(!cloudDb) return;
@@ -2007,6 +2109,8 @@ function collectCurrentState(){
     usdRate: document.getElementById("usdRate")?.value || "",
     showDollar: showDollar,
     greeting: document.getElementById("greetingTxt")?.value || "",
+    showAddressedTo: !!document.getElementById("showAddressedTo")?.checked,
+    addressedToText: document.getElementById("addressedToText")?.value || "",
     machines: machines, totals: totals, adds: adds, dets: dets
   };
 }
@@ -2016,6 +2120,8 @@ function restoreArchivedState(state){
   document.getElementById("quoteDate").value = state.date || "";
   document.getElementById("usdRate").value = state.usdRate || "";
   document.getElementById("greetingTxt").value = state.greeting || "";
+  document.getElementById("showAddressedTo").checked = !!state.showAddressedTo;
+  document.getElementById("addressedToText").value = state.addressedToText || "";
   showDollar = state.showDollar !== false;
   const dBtn = document.getElementById("btnToggleDollar");
   if(showDollar){ dBtn.textContent="🗑️ إخفاء سعر الدولار من العرض"; dBtn.style.background="#fee2e2"; dBtn.style.color="#dc2626"; }
@@ -2192,6 +2298,17 @@ doPrint = function(){
       <button class="modal-close" onclick="closeArchiveModal()">&#x2715;</button>
     </div>
     <div class="archive-body" id="archiveListWrap"></div>
+  </div>
+</div>
+
+<!-- MANAGE SAVED MACHINES MODAL -->
+<div class="modal-overlay" id="manageMachinesModal">
+  <div class="modal-box archive-box">
+    <div class="modal-header">
+      <h3>&#128295; إدارة الماكينات المحفوظة</h3>
+      <button class="modal-close" onclick="closeManageMachinesModal()">&#x2715;</button>
+    </div>
+    <div class="archive-body" id="manageMachinesListWrap"></div>
   </div>
 </div>
 
